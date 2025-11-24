@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lovely Type | Practice</title>
+    <title>Lovely Type Pro | Master Typing</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Chart.js (for Dashboard) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
         tailwind.config = {
@@ -20,21 +22,21 @@
                         mono: ['JetBrains Mono', 'monospace'],
                     },
                     colors: {
-                        glass: 'rgba(255, 255, 255, 0.1)',
-                        glassBorder: 'rgba(255, 255, 255, 0.2)',
+                        glass: 'rgba(30, 41, 59, 0.7)',
+                        glassLight: 'rgba(255, 255, 255, 0.05)',
                         primary: '#c084fc', // Purple-400
                         secondary: '#2dd4bf', // Teal-400
-                        error: '#fb7185', // Rose-400
+                        accent: '#f472b6', // Pink-400
                         bgDark: '#0f172a',
                     },
                     animation: {
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'blink': 'blink 1s infinite',
+                        'float': 'float 6s ease-in-out infinite',
                     },
                     keyframes: {
-                        blink: {
-                            '0%, 100%': { opacity: '1' },
-                            '50%': { opacity: '0' },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
                         }
                     }
                 }
@@ -48,372 +50,817 @@
             background-image: 
                 radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
                 radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+                radial-gradient(at 100% 100%, hsla(339,49%,30%,1) 0, transparent 50%);
             color: #e2e8f0;
             overflow-x: hidden;
             min-height: 100vh;
-            /* Prevent pull-to-refresh on mobile which ruins the app feel */
             overscroll-behavior-y: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #334155; 
-            border-radius: 4px;
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
 
-        /* Typing Area Styles */
-        .typing-text span {
-            position: relative;
-            margin-right: 1px;
-            transition: color 0.1s ease;
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
         }
 
-        /* Active Character (Cursor) */
-        .typing-text span.active::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            height: 2px;
-            width: 100%;
-            background: #2dd4bf;
+        /* Typing & Cursor */
+        .cursor-blink {
             animation: blink 1s infinite;
         }
-        
-        .typing-text span.active.is-error::before {
-            background: #fb7185;
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .letter { position: relative; transition: color 0.1s; }
+        .letter.active::before {
+            content: ""; position: absolute; left: 0; bottom: -2px;
+            width: 100%; height: 2px; background: #2dd4bf;
+            animation: blink 1s infinite;
+        }
+        .letter.correct { color: #2dd4bf; }
+        .letter.incorrect { color: #f87171; text-decoration: underline; }
+
+        /* Navigation Active State */
+        .nav-item.active {
+            background: rgba(192, 132, 252, 0.15);
+            color: #c084fc;
+            border-left: 3px solid #c084fc;
         }
 
-        .typing-text span.correct {
-            color: #2dd4bf; /* Teal */
-        }
-
-        .typing-text span.incorrect {
-            color: #fb7185; /* Red */
-            background: rgba(251, 113, 133, 0.1);
-            border-radius: 2px;
-        }
-
-        /* Glassmorphism Card */
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-
+        /* Mobile Adjustments */
         .hidden-input {
-            opacity: 0;
-            position: absolute;
-            z-index: -999;
-            /* Prevent iOS zoom on focus */
-            font-size: 16px;
-            pointer-events: none;
+            opacity: 0; position: absolute; z-index: -999;
+            height: 0; width: 0;
         }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        /* Page Transitions */
+        .page-section {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="flex items-center justify-center font-sans selection:bg-purple-500 selection:text-white p-4">
+<body class="font-sans flex h-screen overflow-hidden selection:bg-purple-500 selection:text-white">
 
-    <div class="w-full max-w-3xl">
+    <!-- DESKTOP SIDEBAR / MOBILE BOTTOM NAV -->
+    <nav class="fixed bottom-0 w-full md:relative md:w-64 md:h-screen glass-panel z-50 flex md:flex-col justify-between md:py-8 py-2 px-4 md:px-0 border-t md:border-t-0 md:border-r border-white/10">
         
-        <!-- Header -->
-        <header class="flex justify-between items-end mb-8">
-            <div>
-                <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-purple-400">Lovely Type</h1>
-                <p class="text-slate-400 text-sm mt-1">Focus. Breathe. Type.</p>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="setDuration(15)" class="time-opt px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 hover:text-white transition active-time" data-time="15">15s</button>
-                <button onclick="setDuration(30)" class="time-opt px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 hover:text-white transition" data-time="30">30s</button>
-                <button onclick="setDuration(60)" class="time-opt px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 hover:text-white transition" data-time="60">60s</button>
-            </div>
-        </header>
-
-        <!-- Main Card -->
-        <div class="glass-panel rounded-2xl p-6 md:p-8 relative overflow-hidden group" id="game-container">
-            
-            <!-- Click Overlay (to focus) -->
-            <div id="focus-overlay" onclick="focusInput()" class="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] cursor-pointer transition-opacity duration-300">
-                <div class="text-center animate-pulse-slow">
-                    <i class="ph ph-cursor-click text-4xl text-teal-400 mb-2"></i>
-                    <p class="text-lg font-medium text-white">Tap here or press any key to focus</p>
-                </div>
-            </div>
-
-            <!-- Stats Bar -->
-            <div class="flex flex-wrap justify-between items-center mb-6 text-slate-400 text-sm font-mono border-b border-slate-700/50 pb-4 gap-y-2">
-                <div class="flex gap-6 w-full md:w-auto justify-between md:justify-start">
-                    <div class="flex flex-col">
-                        <span class="text-[10px] md:text-xs uppercase tracking-wider text-slate-500">Time</span>
-                        <span class="text-lg md:text-xl font-bold text-white"><b id="time">60</b>s</span>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] md:text-xs uppercase tracking-wider text-slate-500">Mistakes</span>
-                        <span class="text-lg md:text-xl font-bold text-white" id="mistake">0</span>
-                    </div>
-                </div>
-                <div class="flex gap-6 w-full md:w-auto justify-between md:justify-end">
-                    <div class="flex flex-col md:items-end">
-                        <span class="text-[10px] md:text-xs uppercase tracking-wider text-slate-500">WPM</span>
-                        <span class="text-lg md:text-xl font-bold text-teal-400" id="wpm">0</span>
-                    </div>
-                    <div class="flex flex-col items-end">
-                        <span class="text-[10px] md:text-xs uppercase tracking-wider text-slate-500">Accuracy</span>
-                        <span class="text-lg md:text-xl font-bold text-purple-400" id="accuracy">100%</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Typing Area -->
-            <div class="relative min-h-[150px]" onclick="focusInput()">
-                <!-- Mobile Optimized Input -->
-                <input type="text" 
-                       class="hidden-input" 
-                       id="input-field" 
-                       autocomplete="off" 
-                       autocorrect="off" 
-                       autocapitalize="off" 
-                       spellcheck="false"
-                       inputmode="text">
-                
-                <div class="typing-text font-mono text-lg md:text-2xl leading-relaxed text-slate-500 break-words select-none">
-                    <!-- Text injected by JS -->
-                </div>
-            </div>
-
-            <!-- Footer Controls -->
-            <div class="flex justify-center mt-8 pt-4">
-                <button onclick="resetGame()" class="flex items-center gap-2 px-6 py-2 rounded-full bg-slate-700/50 hover:bg-slate-700 text-white transition hover:scale-105 active:scale-95 group-hover:bg-slate-700/80">
-                    <i class="ph ph-arrows-clockwise text-xl group-hover:rotate-180 transition-transform duration-500"></i>
-                    <span>Restart Test</span>
-                </button>
-            </div>
+        <!-- Logo Area (Desktop) -->
+        <div class="hidden md:block px-8 mb-8">
+            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-purple-400">Lovely Type</h1>
+            <span class="text-xs text-slate-400 uppercase tracking-widest">Pro Edition</span>
         </div>
 
-        <!-- Result Modal (Hidden by default) -->
-        <div id="result-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
-            <div class="glass-panel p-8 rounded-2xl max-w-sm w-full text-center transform scale-95 transition-transform duration-300" id="result-card">
-                <div class="w-16 h-16 bg-gradient-to-tr from-teal-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/30">
-                    <i class="ph ph-trophy text-3xl text-white"></i>
+        <!-- Menu Items -->
+        <div class="flex md:flex-col w-full justify-around md:justify-start gap-1 md:gap-2">
+            <button onclick="router.navigate('home')" id="nav-home" class="nav-item active flex flex-col md:flex-row items-center md:px-8 py-2 md:py-3 text-slate-400 hover:text-white transition rounded-lg md:rounded-none">
+                <i class="ph ph-house text-2xl md:text-xl md:mr-3"></i>
+                <span class="text-[10px] md:text-sm mt-1 md:mt-0 font-medium">Home</span>
+            </button>
+            <button onclick="router.navigate('learn')" id="nav-learn" class="nav-item flex flex-col md:flex-row items-center md:px-8 py-2 md:py-3 text-slate-400 hover:text-white transition rounded-lg md:rounded-none">
+                <i class="ph ph-graduation-cap text-2xl md:text-xl md:mr-3"></i>
+                <span class="text-[10px] md:text-sm mt-1 md:mt-0 font-medium">Learn</span>
+            </button>
+            <button onclick="router.navigate('practice')" id="nav-practice" class="nav-item flex flex-col md:flex-row items-center md:px-8 py-2 md:py-3 text-slate-400 hover:text-white transition rounded-lg md:rounded-none">
+                <i class="ph ph-lightning text-2xl md:text-xl md:mr-3"></i>
+                <span class="text-[10px] md:text-sm mt-1 md:mt-0 font-medium">Practice</span>
+            </button>
+            <button onclick="router.navigate('playground')" id="nav-playground" class="nav-item flex flex-col md:flex-row items-center md:px-8 py-2 md:py-3 text-slate-400 hover:text-white transition rounded-lg md:rounded-none">
+                <i class="ph ph-keyboard text-2xl md:text-xl md:mr-3"></i>
+                <span class="text-[10px] md:text-sm mt-1 md:mt-0 font-medium">Playground</span>
+            </button>
+            <button onclick="router.navigate('settings')" id="nav-settings" class="nav-item flex flex-col md:flex-row items-center md:px-8 py-2 md:py-3 text-slate-400 hover:text-white transition rounded-lg md:rounded-none">
+                <i class="ph ph-gear text-2xl md:text-xl md:mr-3"></i>
+                <span class="text-[10px] md:text-sm mt-1 md:mt-0 font-medium">Settings</span>
+            </button>
+        </div>
+
+        <!-- Footer (Desktop) -->
+        <div class="hidden md:block px-8">
+            <div class="p-4 rounded-xl bg-gradient-to-br from-purple-900/50 to-slate-900 border border-white/5">
+                <p class="text-xs text-slate-400 mb-2">Daily Goal</p>
+                <div class="w-full bg-slate-700 h-1.5 rounded-full mb-1">
+                    <div class="bg-teal-400 h-1.5 rounded-full" style="width: 65%"></div>
                 </div>
-                <h2 class="text-2xl font-bold text-white mb-1">Great Job!</h2>
-                <p class="text-slate-400 text-sm mb-6">Here is how you performed</p>
-                
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <div class="bg-slate-800/50 p-3 rounded-xl">
-                        <div class="text-2xl font-bold text-teal-400" id="final-wpm">0</div>
-                        <div class="text-xs text-slate-500 uppercase">WPM</div>
+                <p class="text-[10px] text-right text-teal-400">13/20 mins</p>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 relative overflow-y-auto overflow-x-hidden h-[calc(100vh-60px)] md:h-screen pb-20 md:pb-0">
+        
+        <!-- ================= HOME DASHBOARD ================= -->
+        <section id="home" class="page-section active p-6 md:p-12 max-w-7xl mx-auto">
+            <header class="mb-10 flex justify-between items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-white mb-2">Welcome Back, <span class="text-purple-400">Typer</span></h2>
+                    <p class="text-slate-400">Your fingers are getting faster every day.</p>
+                </div>
+                <div class="glass-panel px-4 py-2 rounded-full flex items-center gap-2">
+                    <i class="ph-fill ph-fire text-orange-400 text-xl animate-pulse"></i>
+                    <span class="font-mono font-bold text-white"><span id="streak-display">3</span> Day Streak</span>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-teal-400">
+                    <div class="text-slate-400 text-sm font-medium uppercase tracking-wider mb-2">Best WPM</div>
+                    <div class="text-4xl font-mono font-bold text-white" id="stat-best-wpm">0</div>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-purple-400">
+                    <div class="text-slate-400 text-sm font-medium uppercase tracking-wider mb-2">Lessons Passed</div>
+                    <div class="text-4xl font-mono font-bold text-white" id="stat-lessons">0</div>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-pink-400">
+                    <div class="text-slate-400 text-sm font-medium uppercase tracking-wider mb-2">Total XP</div>
+                    <div class="text-4xl font-mono font-bold text-white" id="stat-xp">0</div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl">
+                <h3 class="text-xl font-bold text-white mb-6">Recent Activity</h3>
+                <div class="h-64 w-full">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= LEARN CURRICULUM ================= -->
+        <section id="learn" class="page-section p-6 md:p-12 max-w-5xl mx-auto">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold text-white mb-2">Touch Typing Curriculum</h2>
+                <p class="text-slate-400">Master the keyboard one row at a time.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="level-grid">
+                <!-- Levels injected by JS -->
+            </div>
+        </section>
+
+        <!-- ================= PRACTICE / GAME ENGINE ================= -->
+        <section id="practice" class="page-section h-full flex flex-col items-center justify-center p-4">
+            <div class="w-full max-w-4xl">
+                <!-- Game Header -->
+                <div class="flex justify-between items-end mb-8 w-full px-4">
+                    <div class="flex gap-4">
+                        <span class="bg-slate-800/50 text-slate-300 px-3 py-1 rounded-lg text-sm font-mono border border-slate-700">
+                            Mode: <span id="game-mode-display" class="text-teal-400">Time Attack</span>
+                        </span>
+                        <span class="bg-slate-800/50 text-slate-300 px-3 py-1 rounded-lg text-sm font-mono border border-slate-700">
+                            Sound: <span id="sound-status" class="text-purple-400">ON</span>
+                        </span>
                     </div>
-                    <div class="bg-slate-800/50 p-3 rounded-xl">
-                        <div class="text-2xl font-bold text-purple-400" id="final-acc">0%</div>
-                        <div class="text-xs text-slate-500 uppercase">Accuracy</div>
+                    <div class="flex gap-2" id="time-controls">
+                        <button onclick="game.setTime(15)" class="time-opt px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 hover:text-white transition" data-time="15">15s</button>
+                        <button onclick="game.setTime(30)" class="time-opt px-3 py-1 rounded-full text-xs font-medium bg-slate-700 text-white transition" data-time="30">30s</button>
+                        <button onclick="game.setTime(60)" class="time-opt px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 hover:text-white transition" data-time="60">60s</button>
                     </div>
                 </div>
 
-                <button onclick="closeResult()" class="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition">
-                    Try Again
-                </button>
+                <!-- Active Game Board -->
+                <div class="glass-panel p-8 md:p-12 rounded-3xl relative overflow-hidden shadow-2xl">
+                    
+                    <!-- Stats Overlay -->
+                    <div class="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
+                        <div class="text-center">
+                            <div class="text-xs uppercase text-slate-500 font-bold tracking-widest">Time</div>
+                            <div class="text-3xl font-mono font-bold text-white" id="timer">30</div>
+                        </div>
+                         <div class="text-center">
+                            <div class="text-xs uppercase text-slate-500 font-bold tracking-widest">WPM</div>
+                            <div class="text-3xl font-mono font-bold text-teal-400" id="live-wpm">0</div>
+                        </div>
+                         <div class="text-center">
+                            <div class="text-xs uppercase text-slate-500 font-bold tracking-widest">Accuracy</div>
+                            <div class="text-3xl font-mono font-bold text-purple-400" id="live-acc">100%</div>
+                        </div>
+                    </div>
+
+                    <!-- Typing Area -->
+                    <div id="typing-area" class="relative min-h-[120px] outline-none" tabindex="0">
+                        <div id="click-overlay" class="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/60 backdrop-blur-[2px] cursor-pointer transition-opacity duration-300 rounded-xl">
+                            <div class="text-center">
+                                <i class="ph ph-hand-tap text-4xl text-teal-400 mb-2 animate-bounce"></i>
+                                <p class="text-white font-medium">Click or Tap to Start</p>
+                            </div>
+                        </div>
+                        
+                        <div id="text-display" class="font-mono text-xl md:text-2xl leading-loose text-slate-500 select-none break-words">
+                            <!-- Text goes here -->
+                        </div>
+                        <input type="text" class="hidden-input" id="input-field" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    </div>
+
+                    <!-- Reset -->
+                    <div class="mt-8 flex justify-center">
+                        <button onclick="game.reset()" class="p-3 rounded-full bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition group">
+                            <i class="ph ph-arrows-clockwise text-xl group-hover:rotate-180 transition-transform duration-500"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PLAYGROUND ================= -->
+        <section id="playground" class="page-section p-6 md:p-12 max-w-4xl mx-auto h-full">
+            <h2 class="text-2xl font-bold text-white mb-4">Playground <span class="text-sm font-normal text-slate-400 ml-2">Type freely. No timers. No stress.</span></h2>
+            
+            <div class="glass-panel p-1 rounded-2xl h-[60vh] flex flex-col">
+                <textarea id="playground-input" class="w-full h-full bg-transparent border-none outline-none text-slate-200 font-mono text-lg p-6 resize-none placeholder-slate-600" placeholder="Start typing anything you want here..."></textarea>
+                <div class="bg-slate-900/50 p-3 rounded-b-xl flex justify-between text-xs text-slate-400 font-mono">
+                    <span id="pg-chars">0 chars</span>
+                    <span id="pg-words">0 words</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SETTINGS ================= -->
+        <section id="settings" class="page-section p-6 md:p-12 max-w-2xl mx-auto">
+            <h2 class="text-3xl font-bold text-white mb-8">Settings</h2>
+            
+            <div class="glass-panel rounded-2xl overflow-hidden mb-8">
+                <div class="p-6 border-b border-white/5 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-white font-medium">Sound Effects</h4>
+                        <p class="text-xs text-slate-400">Mechanical keyboard clicks and UI sounds</p>
+                    </div>
+                    <button onclick="toggleSound()" id="btn-sound-toggle" class="w-12 h-6 rounded-full bg-teal-500 relative transition-colors">
+                        <div class="w-4 h-4 bg-white rounded-full absolute top-1 right-1 transition-all"></div>
+                    </button>
+                </div>
+                <div class="p-6 border-b border-white/5 flex justify-between items-center">
+                     <div>
+                        <h4 class="text-white font-medium">Clear Data</h4>
+                        <p class="text-xs text-slate-400">Reset all progress, levels, and XP</p>
+                    </div>
+                    <button onclick="app.clearData()" class="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white rounded-lg text-sm transition font-medium">
+                        Reset All
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-center text-slate-500 text-xs">
+                Lovely Type Pro v2.0 <br> Built with <i class="ph-fill ph-heart text-red-500"></i> in Single File HTML
+            </div>
+        </section>
+
+    </main>
+
+    <!-- RESULTS MODAL -->
+    <div id="result-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="glass-panel p-8 rounded-3xl max-w-md w-full text-center transform scale-95 transition-transform duration-300 relative overflow-hidden" id="result-card">
+            
+            <!-- Confetti Effect (CSS only for simplicity) -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 via-teal-500 to-pink-500"></div>
+
+            <h2 class="text-3xl font-bold text-white mb-2 mt-4" id="res-title">Level Complete!</h2>
+            <p class="text-slate-400 text-sm mb-8" id="res-subtitle">New High Score Unlocked</p>
+            
+            <div class="flex justify-center items-end gap-2 mb-8">
+                <div class="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-teal-300 to-teal-500 font-mono" id="res-wpm">45</div>
+                <div class="text-xl text-slate-500 font-medium mb-2">WPM</div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 mb-8">
+                <div class="bg-slate-800/50 p-3 rounded-xl">
+                    <div class="text-white font-bold" id="res-acc">98%</div>
+                    <div class="text-[10px] uppercase text-slate-500">Acc</div>
+                </div>
+                <div class="bg-slate-800/50 p-3 rounded-xl">
+                    <div class="text-white font-bold" id="res-mistakes">2</div>
+                    <div class="text-[10px] uppercase text-slate-500">Miss</div>
+                </div>
+                <div class="bg-slate-800/50 p-3 rounded-xl">
+                    <div class="text-yellow-400 font-bold" id="res-xp">+50</div>
+                    <div class="text-[10px] uppercase text-slate-500">XP</div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="router.navigate('home'); closeModal()" class="flex-1 py-3 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-800 transition">Menu</button>
+                <button onclick="game.retry()" class="flex-1 py-3 rounded-xl bg-white text-slate-900 font-bold hover:bg-teal-50 transition">Next / Retry</button>
             </div>
         </div>
     </div>
 
+    <!-- AUDIO ENGINE & LOGIC -->
     <script>
-        const paragraphs = [
-            "The quick brown fox jumps over the lazy dog. It is a classic sentence used to test typewriters and computer keyboards because it uses every letter in the English alphabet.",
-            "Technology is best when it brings people together. We are changing the world with technology. The advance of technology is based on making it fit in so that you don't really even notice it, so it's part of everyday life.",
-            "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment. Do not go where the path may lead, go instead where there is no path and leave a trail.",
-            "Success is not final, failure is not fatal: it is the courage to continue that counts. Believe you can and you're halfway there. I can't change the direction of the wind, but I can adjust my sails to always reach my destination.",
-            "In the middle of difficulty lies opportunity. Life is what happens when you're busy making other plans. The only way to do great work is to love what you do. If you haven't found it yet, keep looking. Don't settle.",
-            "Code is like humor. When you have to explain it, it’s bad. Fix the cause, not the symptom. Simplicity is the soul of efficiency. Before software can be reusable it first has to be usable.",
-            "The stars illuminate the night sky, guiding travelers across the vast oceans. Nature has a way of balancing itself, creating harmony in the chaos of existence.",
-            "Creativity is intelligence having fun. It is the ability to see things differently and create something new from the ordinary. Imagination is more important than knowledge."
+        // --- 1. Audio Engine (Synthesizer) ---
+        const SoundEngine = {
+            ctx: null,
+            enabled: true,
+
+            init() {
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+            },
+
+            playTone(freq, type, duration, vol) {
+                if (!this.enabled) return;
+                if (!this.ctx) this.init();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            },
+
+            click() {
+                // Mechanical switch sound (High burst of noise/sine)
+                this.playTone(600, 'sine', 0.05, 0.1); 
+                this.playTone(300, 'square', 0.02, 0.05);
+            },
+
+            error() {
+                // Low buzz
+                this.playTone(150, 'sawtooth', 0.2, 0.1);
+            },
+
+            success() {
+                // High ding
+                this.playTone(800, 'sine', 0.3, 0.1);
+                setTimeout(() => this.playTone(1200, 'sine', 0.4, 0.05), 100);
+            }
+        };
+
+        // --- 2. Data & State Management ---
+        const Levels = [
+            { id: 1, title: "Home Row Basics", desc: "F, J, D, K", content: "fjdk fjdk djkf kdfj ffdj kkdf fjkd kdjf", xp: 50, reqWpm: 10 },
+            { id: 2, title: "Home Row Full", desc: "A, S, L, ;", content: "asl; al;s sl;a ;lsa fjdk asl; fjdk asl;", xp: 75, reqWpm: 15 },
+            { id: 3, title: "Top Row Left", desc: "Q, W, E, R, T", content: "qwer trew qret tert wqer fjdksl qwer", xp: 100, reqWpm: 20 },
+            { id: 4, title: "Top Row Right", desc: "Y, U, I, O, P", content: "yuiop poiuy yuio opiu hjkl yuiop", xp: 100, reqWpm: 20 },
+            { id: 5, title: "Bottom Row", desc: "Z, X, C, V, B, N, M", content: "zxcv bnm mnb vcxz zxcvbnm fjdksl", xp: 150, reqWpm: 25 },
+            { id: 6, title: "Capitalization", desc: "Shift Key Mastery", content: "The Quick Brown Fox Jumps Over The Lazy Dog", xp: 200, reqWpm: 30 },
+            { id: 7, title: "Punctuation", desc: ".,!?'", content: "Hello, world! How are you? It's a fine day.", xp: 250, reqWpm: 35 },
+            { id: 8, title: "Code Syntax", desc: "Programming Basics", content: "function init() { return true; } const x = 10;", xp: 300, reqWpm: 40 }
         ];
 
-        const typingText = document.querySelector(".typing-text");
-        const inpField = document.querySelector(".hidden-input");
-        const mistakeTag = document.querySelector("#mistake");
-        const timeTag = document.querySelector("#time");
-        const wpmTag = document.querySelector("#wpm");
-        const accTag = document.querySelector("#accuracy");
-        const focusOverlay = document.getElementById("focus-overlay");
-        const timeButtons = document.querySelectorAll(".time-opt");
-        
-        // Modal elements
-        const resultModal = document.getElementById("result-modal");
-        const resultCard = document.getElementById("result-card");
-        const finalWpm = document.getElementById("final-wpm");
-        const finalAcc = document.getElementById("final-acc");
+        const Quotes = [
+            "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+            "Technology is best when it brings people together. We are changing the world with technology.",
+            "Simplicity is the ultimate sophistication. Art is the elimination of the unnecessary.",
+            "In the middle of difficulty lies opportunity. Keep looking. Don't settle.",
+            "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment."
+        ];
 
-        let timer;
-        let maxTime = 60;
-        let timeLeft = maxTime;
-        let charIndex = 0; // Current character index
-        let mistakes = 0;
-        let isTyping = false;
+        const AppState = {
+            xp: 0,
+            level: 1, // Highest level unlocked
+            bestWpm: 0,
+            lessonsPassed: 0,
+            streak: 1,
+            history: [], // Array of {date, wpm}
 
-        function setDuration(seconds) {
-            maxTime = seconds;
-            timeLeft = seconds;
-            timeTag.innerText = timeLeft;
-            
-            // UI Update
-            timeButtons.forEach(btn => {
-                if(parseInt(btn.dataset.time) === seconds) {
-                    btn.classList.add("text-white", "bg-slate-700");
-                    btn.classList.remove("text-slate-400", "bg-slate-800");
-                } else {
-                    btn.classList.remove("text-white", "bg-slate-700");
-                    btn.classList.add("text-slate-400", "bg-slate-800");
+            load() {
+                const saved = localStorage.getItem('lovelyTypePro');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    this.xp = parsed.xp || 0;
+                    this.level = parsed.level || 1;
+                    this.bestWpm = parsed.bestWpm || 0;
+                    this.lessonsPassed = parsed.lessonsPassed || 0;
+                    this.streak = parsed.streak || 1;
+                    this.history = parsed.history || [];
                 }
-            });
-            resetGame();
-        }
+            },
 
-        // Initialize defaults
-        setDuration(60);
+            save() {
+                localStorage.setItem('lovelyTypePro', JSON.stringify({
+                    xp: this.xp,
+                    level: this.level,
+                    bestWpm: this.bestWpm,
+                    lessonsPassed: this.lessonsPassed,
+                    streak: this.streak,
+                    history: this.history
+                }));
+                this.updateUI();
+            },
 
-        function loadParagraph() {
-            const randIndex = Math.floor(Math.random() * paragraphs.length);
-            typingText.innerHTML = "";
-            paragraphs[randIndex].split("").forEach(char => {
-                let span = `<span>${char}</span>`;
-                typingText.innerHTML += span;
-            });
-            typingText.querySelectorAll("span")[0].classList.add("active");
-            
-            // Focus input on load (desktop)
-            document.addEventListener("keydown", () => inpField.focus());
-        }
-
-        function initTyping() {
-            let characters = typingText.querySelectorAll("span");
-            let typedChar = inpField.value.split("")[charIndex];
-
-            // Start timer on first keypress
-            if(!isTyping) {
-                timer = setInterval(initTimer, 1000);
-                isTyping = true;
-                focusOverlay.style.opacity = "0";
-                setTimeout(() => focusOverlay.style.display = "none", 300);
+            updateUI() {
+                document.getElementById('stat-xp').innerText = this.xp;
+                document.getElementById('stat-lessons').innerText = this.lessonsPassed;
+                document.getElementById('stat-best-wpm').innerText = this.bestWpm;
+                document.getElementById('streak-display').innerText = this.streak;
+                renderLevels();
+                renderChart();
             }
+        };
 
-            // Handle Backspace logic
-            if(typedChar == null) {
-                if(charIndex > 0) {
-                    charIndex--;
-                    if(characters[charIndex].classList.contains("incorrect")) {
-                        mistakes--;
+        // --- 3. Game Engine ---
+        const Game = {
+            isActive: false,
+            mode: 'practice', // 'practice' (time) or 'learn' (content)
+            currentLevelId: null,
+            timer: null,
+            maxTime: 30,
+            timeLeft: 30,
+            text: "",
+            charIndex: 0,
+            mistakes: 0,
+            
+            elements: {
+                area: document.getElementById('typing-area'),
+                input: document.getElementById('input-field'),
+                textDisplay: document.getElementById('text-display'),
+                timer: document.getElementById('timer'),
+                wpm: document.getElementById('live-wpm'),
+                acc: document.getElementById('live-acc'),
+                overlay: document.getElementById('click-overlay')
+            },
+
+            start(mode, levelId = null) {
+                this.mode = mode;
+                this.currentLevelId = levelId;
+                
+                // Content Setup
+                if (mode === 'learn') {
+                    const lvl = Levels.find(l => l.id === levelId);
+                    this.text = lvl.content;
+                    document.getElementById('game-mode-display').innerText = `Level ${levelId}`;
+                    document.getElementById('time-controls').style.display = 'none';
+                    this.maxTime = 999; // Essentially infinite for learning
+                } else {
+                    this.text = Quotes[Math.floor(Math.random() * Quotes.length)];
+                    document.getElementById('game-mode-display').innerText = `Time Attack`;
+                    document.getElementById('time-controls').style.display = 'flex';
+                }
+
+                this.reset();
+            },
+
+            setTime(sec) {
+                this.maxTime = sec;
+                this.reset();
+            },
+
+            reset() {
+                clearInterval(this.timer);
+                this.isActive = false;
+                this.timeLeft = this.mode === 'learn' ? 0 : this.maxTime;
+                this.charIndex = 0;
+                this.mistakes = 0;
+                this.elements.input.value = "";
+                this.elements.input.blur();
+                this.elements.overlay.style.opacity = "1";
+                this.elements.overlay.style.pointerEvents = "auto";
+                
+                // Render Text
+                this.elements.textDisplay.innerHTML = "";
+                this.text.split("").forEach(char => {
+                    this.elements.textDisplay.innerHTML += `<span class="letter">${char}</span>`;
+                });
+                this.elements.textDisplay.querySelectorAll(".letter")[0].classList.add("active");
+
+                // Reset Stats
+                this.elements.timer.innerText = this.mode === 'learn' ? '∞' : this.timeLeft;
+                this.elements.wpm.innerText = 0;
+                this.elements.acc.innerText = "100%";
+            },
+
+            activate() {
+                if(this.isActive) return;
+                
+                this.isActive = true;
+                this.elements.input.focus();
+                this.elements.overlay.style.opacity = "0";
+                this.elements.overlay.style.pointerEvents = "none";
+                SoundEngine.init(); // Ensure AudioContext starts
+
+                if (this.mode === 'practice') {
+                    this.timer = setInterval(() => {
+                        if (this.timeLeft > 0) {
+                            this.timeLeft--;
+                            this.elements.timer.innerText = this.timeLeft;
+                            this.calcStats();
+                        } else {
+                            this.endGame();
+                        }
+                    }, 1000);
+                } else {
+                    // Learning mode timer counts UP just for stats, logic handled elsewhere
+                    this.startTime = Date.now();
+                }
+            },
+
+            handleInput() {
+                if (!this.isActive) this.activate();
+
+                const chars = this.elements.textDisplay.querySelectorAll(".letter");
+                const typedChar = this.elements.input.value.split("")[this.charIndex];
+
+                // Backspace
+                if (typedChar == null) {
+                    if (this.charIndex > 0) {
+                        this.charIndex--;
+                        chars[this.charIndex].classList.remove("correct", "incorrect");
+                        chars[this.charIndex].classList.add("active");
+                        chars[this.charIndex + 1].classList.remove("active");
                     }
-                    characters[charIndex].classList.remove("correct", "incorrect");
+                    return;
                 }
-            } else {
-                if(characters[charIndex].innerText === typedChar) {
-                    characters[charIndex].classList.add("correct");
+
+                // Match Logic
+                if (chars[this.charIndex].innerText === typedChar) {
+                    chars[this.charIndex].classList.add("correct");
+                    SoundEngine.click();
                 } else {
-                    mistakes++;
-                    characters[charIndex].classList.add("incorrect");
+                    this.mistakes++;
+                    chars[this.charIndex].classList.add("incorrect");
+                    SoundEngine.error();
                 }
-                charIndex++;
-            }
 
-            // Move cursor (active class)
-            characters.forEach(span => span.classList.remove("active"));
-            if(charIndex < characters.length) {
-                characters[charIndex].classList.add("active");
+                chars[this.charIndex].classList.remove("active");
+                this.charIndex++;
+
+                if (this.charIndex < chars.length) {
+                    chars[this.charIndex].classList.add("active");
+                } else {
+                    // Finished Text
+                    this.endGame();
+                }
+
+                this.calcStats();
+            },
+
+            calcStats() {
+                let wpm;
+                if(this.mode === 'practice') {
+                     const timeSpent = this.maxTime - this.timeLeft;
+                     wpm = Math.round(((this.charIndex - this.mistakes) / 5) / (timeSpent / 60));
+                } else {
+                    const timeSpent = (Date.now() - this.startTime) / 1000;
+                    wpm = Math.round(((this.charIndex - this.mistakes) / 5) / (timeSpent / 60));
+                }
+                
+                wpm = wpm < 0 || !wpm || wpm === Infinity ? 0 : wpm;
+                
+                let acc = Math.round(((this.charIndex - this.mistakes) / this.charIndex) * 100);
+                acc = acc < 0 || !acc || acc === Infinity ? 100 : acc;
+
+                this.elements.wpm.innerText = wpm;
+                this.elements.acc.innerText = acc + "%";
+                return { wpm, acc };
+            },
+
+            endGame() {
+                clearInterval(this.timer);
+                this.isActive = false;
+                const stats = this.calcStats();
+                SoundEngine.success();
+
+                // Logic for Modal
+                const modal = document.getElementById('result-modal');
+                const card = document.getElementById('result-card');
+                
+                document.getElementById('res-wpm').innerText = stats.wpm;
+                document.getElementById('res-acc').innerText = stats.acc + "%";
+                document.getElementById('res-mistakes').innerText = this.mistakes;
+
+                // Save Data
+                if (stats.wpm > AppState.bestWpm) AppState.bestWpm = stats.wpm;
+                AppState.history.push({date: new Date().toLocaleDateString(), wpm: stats.wpm});
+                if(AppState.history.length > 7) AppState.history.shift(); // Keep last 7 entries
+
+                let xpGained = 0;
+                let title = "Completed!";
+                let subtitle = "Good effort.";
+
+                if (this.mode === 'learn') {
+                    const lvl = Levels.find(l => l.id === this.currentLevelId);
+                    if (stats.wpm >= lvl.reqWpm && stats.acc > 90) {
+                        title = "Level Mastered!";
+                        subtitle = "Level Unlocked + XP Gained";
+                        xpGained = lvl.xp;
+                        if(this.currentLevelId === AppState.level) AppState.level++;
+                        AppState.lessonsPassed++;
+                    } else {
+                        title = "Level Failed";
+                        subtitle = `Need ${lvl.reqWpm} WPM & 90% Acc`;
+                        xpGained = 10; // Pity XP
+                    }
+                } else {
+                    xpGained = Math.round(stats.wpm / 2); // XP based on speed
+                    title = "Time's Up!";
+                }
+
+                AppState.xp += xpGained;
+                document.getElementById('res-title').innerText = title;
+                document.getElementById('res-subtitle').innerText = subtitle;
+                document.getElementById('res-xp').innerText = "+" + xpGained;
+
+                AppState.save();
+
+                modal.classList.remove("opacity-0", "pointer-events-none");
+                card.classList.remove("scale-95");
+                card.classList.add("scale-100");
+            },
+
+            retry() {
+                closeModal();
+                if(this.mode === 'learn') {
+                     // Check if next level exists and is unlocked
+                     if(this.currentLevelId < AppState.level && this.currentLevelId < Levels.length) {
+                        this.start('learn', this.currentLevelId + 1);
+                     } else {
+                        this.start('learn', this.currentLevelId); // Retry current
+                     }
+                } else {
+                    this.reset();
+                    // Auto focus after short delay to allow transition
+                    setTimeout(() => this.activate(), 500);
+                }
+            }
+        };
+
+        // --- 4. Navigation Router ---
+        const router = {
+            navigate(pageId) {
+                // Update Nav UI
+                document.querySelectorAll('.nav-item').forEach(el => {
+                    el.classList.remove('active');
+                    el.classList.remove('bg-purple-900/20', 'text-purple-400');
+                    el.classList.add('text-slate-400');
+                });
+                
+                const activeNav = document.getElementById(`nav-${pageId}`);
+                if(activeNav) activeNav.classList.add('active');
+
+                // Update Page Visibility
+                document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+                document.getElementById(pageId).classList.add('active');
+
+                // Specific Page Logic
+                if(pageId === 'practice') Game.start('practice');
+                if(pageId === 'learn') renderLevels();
+                if(pageId === 'home') AppState.updateUI();
+            }
+        };
+
+        // --- 5. Helper Functions & Event Listeners ---
+        function renderLevels() {
+            const grid = document.getElementById('level-grid');
+            grid.innerHTML = "";
+            Levels.forEach(lvl => {
+                const isLocked = lvl.id > AppState.level;
+                const card = document.createElement('div');
+                card.className = `glass-card p-6 rounded-2xl relative overflow-hidden group cursor-pointer ${isLocked ? 'opacity-50 grayscale' : ''}`;
+                if(!isLocked) card.onclick = () => { router.navigate('practice'); Game.start('learn', lvl.id); };
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isLocked ? 'bg-slate-700' : 'bg-teal-500/20 text-teal-400'}">
+                            <i class="ph-fill ${isLocked ? 'ph-lock' : 'ph-check-circle'} text-xl"></i>
+                        </div>
+                        <span class="text-xs font-mono text-slate-500">Lvl ${lvl.id}</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-1">${lvl.title}</h3>
+                    <p class="text-sm text-slate-400 mb-4">${lvl.desc}</p>
+                    <div class="flex items-center gap-2 text-xs font-mono text-purple-400">
+                        <i class="ph-fill ph-trophy"></i>
+                        <span>Goal: ${lvl.reqWpm} WPM</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('result-modal');
+            const card = document.getElementById('result-card');
+            modal.classList.add("opacity-0", "pointer-events-none");
+            card.classList.remove("scale-100");
+            card.classList.add("scale-95");
+        }
+
+        function toggleSound() {
+            SoundEngine.enabled = !SoundEngine.enabled;
+            const btn = document.getElementById('btn-sound-toggle');
+            const status = document.getElementById('sound-status');
+            
+            if(SoundEngine.enabled) {
+                btn.classList.add('bg-teal-500');
+                btn.classList.remove('bg-slate-600');
+                btn.children[0].classList.remove('translate-x-[-100%]');
+                btn.children[0].style.right = '4px';
+                btn.children[0].style.left = 'auto';
+                status.innerText = "ON";
+                status.className = "text-purple-400";
+                SoundEngine.success();
             } else {
-                // Completed the paragraph
-                clearInterval(timer);
-                showResult();
-            }
-
-            // Stats Logic
-            let wpm = Math.round(((charIndex - mistakes)  / 5) / (maxTime - timeLeft) * 60);
-            wpm = wpm < 0 || !wpm || wpm === Infinity ? 0 : wpm;
-            
-            wpmTag.innerText = wpm;
-            mistakeTag.innerText = mistakes;
-            
-            // Accuracy
-            let accuracy = Math.round(((charIndex - mistakes) / charIndex) * 100);
-            accuracy = accuracy < 0 || !accuracy || accuracy === Infinity ? 100 : accuracy;
-            accTag.innerText = accuracy + "%";
-        }
-
-        function initTimer() {
-            if(timeLeft > 0) {
-                timeLeft--;
-                timeTag.innerText = timeLeft;
-                let wpm = Math.round(((charIndex - mistakes)  / 5) / (maxTime - timeLeft) * 60);
-                wpmTag.innerText = wpm;
-            } else {
-                clearInterval(timer);
-                showResult();
+                btn.classList.add('bg-slate-600');
+                btn.classList.remove('bg-teal-500');
+                btn.children[0].style.right = 'auto';
+                btn.children[0].style.left = '4px';
+                status.innerText = "OFF";
+                status.className = "text-slate-500";
             }
         }
 
-        function resetGame() {
-            loadParagraph();
-            clearInterval(timer);
-            timeLeft = maxTime;
-            charIndex = mistakes = 0;
-            isTyping = false;
-            inpField.value = "";
-            timeTag.innerText = timeLeft;
-            wpmTag.innerText = 0;
-            mistakeTag.innerText = 0;
-            accTag.innerText = "100%";
+        // Initialize Chart.js
+        function renderChart() {
+            const ctx = document.getElementById('progressChart').getContext('2d');
             
-            // Reset Overlay
-            focusOverlay.style.display = "flex";
-            setTimeout(() => focusOverlay.style.opacity = "1", 10);
-            
-            // Hide Modal
-            resultModal.classList.add("opacity-0", "pointer-events-none");
-            resultCard.classList.remove("scale-100");
-            resultCard.classList.add("scale-95");
-        }
-        
-        function focusInput() {
-            inpField.focus();
-            focusOverlay.style.opacity = "0";
-            setTimeout(() => focusOverlay.style.display = "none", 300);
+            // Destroy existing if needed (simple check)
+            if(window.myChart) window.myChart.destroy();
+
+            window.myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: AppState.history.map((_, i) => i + 1),
+                    datasets: [{
+                        label: 'WPM History',
+                        data: AppState.history.map(h => h.wpm),
+                        borderColor: '#2dd4bf',
+                        backgroundColor: 'rgba(45, 212, 191, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#0f172a',
+                        pointBorderColor: '#2dd4bf',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: { display: false }
+                    }
+                }
+            });
         }
 
-        function showResult() {
-            inpField.blur();
-            finalWpm.innerText = wpmTag.innerText;
-            finalAcc.innerText = accTag.innerText;
-            
-            resultModal.classList.remove("opacity-0", "pointer-events-none");
-            resultCard.classList.remove("scale-95");
-            resultCard.classList.add("scale-100");
-        }
-
-        function closeResult() {
-            resetGame();
-        }
-
-        loadParagraph();
-        inpField.addEventListener("input", initTyping);
-        
-        // Listeners for mobile interaction
-        focusOverlay.addEventListener("touchstart", focusInput);
-        typingText.addEventListener("touchstart", focusInput);
-
-        // Auto focus listener for the whole document (Desktop fallback)
-        document.addEventListener('keydown', (e) => {
-            // Ignore if modal is open
-            if (!resultModal.classList.contains("opacity-0")) return;
-            inpField.focus();
+        // Playground Logic
+        const pgInput = document.getElementById('playground-input');
+        pgInput.addEventListener('input', () => {
+            const text = pgInput.value;
+            const chars = text.length;
+            const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+            document.getElementById('pg-chars').innerText = `${chars} chars`;
+            document.getElementById('pg-words').innerText = `${words} words`;
+            SoundEngine.click();
         });
+
+        // Initialize App
+        AppState.load();
+        AppState.updateUI(); // renders chart and levels
+
+        // Event Listeners for Game
+        document.getElementById('input-field').addEventListener('input', () => Game.handleInput());
+        document.getElementById('typing-area').addEventListener('click', () => Game.elements.input.focus());
+        document.getElementById('click-overlay').addEventListener('click', () => Game.activate());
+        document.addEventListener('keydown', (e) => {
+            // Hotkey to restart game if in practice mode
+            if(e.key === 'Escape' && document.getElementById('practice').classList.contains('active')) {
+                Game.reset();
+            }
+        });
+
+        // Clear Data Function
+        const app = {
+            clearData: () => {
+                if(confirm("Are you sure? This will wipe all your progress.")) {
+                    localStorage.removeItem('lovelyTypePro');
+                    location.reload();
+                }
+            }
+        };
 
     </script>
 </body>
