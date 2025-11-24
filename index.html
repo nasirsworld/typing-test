@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lovely Type | Practice</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -52,6 +52,8 @@
             color: #e2e8f0;
             overflow-x: hidden;
             min-height: 100vh;
+            /* Prevent pull-to-refresh on mobile which ruins the app feel */
+            overscroll-behavior-y: none;
         }
 
         /* Custom Scrollbar */
@@ -112,6 +114,9 @@
             opacity: 0;
             position: absolute;
             z-index: -999;
+            /* Prevent iOS zoom on focus */
+            font-size: 16px;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -122,7 +127,7 @@
         <!-- Header -->
         <header class="flex justify-between items-end mb-8">
             <div>
-                <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-purple-400">Lovely Type</h1>
+                <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-purple-400">Lovely Type</h1>
                 <p class="text-slate-400 text-sm mt-1">Focus. Breathe. Type.</p>
             </div>
             <div class="flex gap-2">
@@ -133,44 +138,53 @@
         </header>
 
         <!-- Main Card -->
-        <div class="glass-panel rounded-2xl p-8 relative overflow-hidden group" id="game-container">
+        <div class="glass-panel rounded-2xl p-6 md:p-8 relative overflow-hidden group" id="game-container">
             
             <!-- Click Overlay (to focus) -->
-            <div id="focus-overlay" class="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] cursor-pointer transition-opacity duration-300">
+            <div id="focus-overlay" onclick="focusInput()" class="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] cursor-pointer transition-opacity duration-300">
                 <div class="text-center animate-pulse-slow">
                     <i class="ph ph-cursor-click text-4xl text-teal-400 mb-2"></i>
-                    <p class="text-lg font-medium text-white">Click here or press any key to focus</p>
+                    <p class="text-lg font-medium text-white">Tap here or press any key to focus</p>
                 </div>
             </div>
 
             <!-- Stats Bar -->
-            <div class="flex justify-between items-center mb-6 text-slate-400 text-sm font-mono border-b border-slate-700/50 pb-4">
-                <div class="flex gap-6">
+            <div class="flex flex-wrap justify-between items-center mb-6 text-slate-400 text-sm font-mono border-b border-slate-700/50 pb-4 gap-y-2">
+                <div class="flex gap-6 w-full md:w-auto justify-between md:justify-start">
                     <div class="flex flex-col">
-                        <span class="text-xs uppercase tracking-wider text-slate-500">Time Left</span>
-                        <span class="text-xl font-bold text-white"><b id="time">60</b>s</span>
+                        <span class="text-[10px] md:text-xs uppercase tracking-wider text-slate-500">Time</span>
+                        <span class="text-lg md:text-xl font-bold text-white"><b id="time">60</b>s</span>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-xs uppercase tracking-wider text-slate-500">Mistakes</span>
-                        <span class="text-xl font-bold text-white" id="mistake">0</span>
+                        <span class="text-[10px] md:text-xs uppercase tracking-wider text-slate-500">Mistakes</span>
+                        <span class="text-lg md:text-xl font-bold text-white" id="mistake">0</span>
                     </div>
                 </div>
-                <div class="flex gap-6">
-                    <div class="flex flex-col items-end">
-                        <span class="text-xs uppercase tracking-wider text-slate-500">WPM</span>
-                        <span class="text-xl font-bold text-teal-400" id="wpm">0</span>
+                <div class="flex gap-6 w-full md:w-auto justify-between md:justify-end">
+                    <div class="flex flex-col md:items-end">
+                        <span class="text-[10px] md:text-xs uppercase tracking-wider text-slate-500">WPM</span>
+                        <span class="text-lg md:text-xl font-bold text-teal-400" id="wpm">0</span>
                     </div>
                     <div class="flex flex-col items-end">
-                        <span class="text-xs uppercase tracking-wider text-slate-500">Accuracy</span>
-                        <span class="text-xl font-bold text-purple-400" id="accuracy">100%</span>
+                        <span class="text-[10px] md:text-xs uppercase tracking-wider text-slate-500">Accuracy</span>
+                        <span class="text-lg md:text-xl font-bold text-purple-400" id="accuracy">100%</span>
                     </div>
                 </div>
             </div>
 
             <!-- Typing Area -->
             <div class="relative min-h-[150px]" onclick="focusInput()">
-                <input type="text" class="hidden-input" id="input-field">
-                <div class="typing-text font-mono text-xl md:text-2xl leading-relaxed text-slate-500 break-words select-none">
+                <!-- Mobile Optimized Input -->
+                <input type="text" 
+                       class="hidden-input" 
+                       id="input-field" 
+                       autocomplete="off" 
+                       autocorrect="off" 
+                       autocapitalize="off" 
+                       spellcheck="false"
+                       inputmode="text">
+                
+                <div class="typing-text font-mono text-lg md:text-2xl leading-relaxed text-slate-500 break-words select-none">
                     <!-- Text injected by JS -->
                 </div>
             </div>
@@ -277,7 +291,6 @@
             
             // Focus input on load (desktop)
             document.addEventListener("keydown", () => inpField.focus());
-            typingText.addEventListener("click", () => inpField.focus());
         }
 
         function initTyping() {
@@ -391,7 +404,11 @@
         loadParagraph();
         inpField.addEventListener("input", initTyping);
         
-        // Auto focus listener for the whole document
+        // Listeners for mobile interaction
+        focusOverlay.addEventListener("touchstart", focusInput);
+        typingText.addEventListener("touchstart", focusInput);
+
+        // Auto focus listener for the whole document (Desktop fallback)
         document.addEventListener('keydown', (e) => {
             // Ignore if modal is open
             if (!resultModal.classList.contains("opacity-0")) return;
