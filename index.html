@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lovely Type | Practice</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        glass: 'rgba(255, 255, 255, 0.1)',
+                        glassBorder: 'rgba(255, 255, 255, 0.2)',
+                        primary: '#c084fc', // Purple-400
+                        secondary: '#2dd4bf', // Teal-400
+                        error: '#fb7185', // Rose-400
+                        bgDark: '#0f172a',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'blink': 'blink 1s infinite',
+                    },
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            color: #e2e8f0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+
+        /* Typing Area Styles */
+        .typing-text span {
+            position: relative;
+            margin-right: 1px;
+            transition: color 0.1s ease;
+        }
+
+        /* Active Character (Cursor) */
+        .typing-text span.active::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            height: 2px;
+            width: 100%;
+            background: #2dd4bf;
+            animation: blink 1s infinite;
+        }
+        
+        .typing-text span.active.is-error::before {
+            background: #fb7185;
+        }
+
+        .typing-text span.correct {
+            color: #2dd4bf; /* Teal */
+        }
+
+        .typing-text span.incorrect {
+            color: #fb7185; /* Red */
+            background: rgba(251, 113, 133, 0.1);
+            border-radius: 2px;
+        }
+
+        /* Glassmorphism Card */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .hidden-input {
+            opacity: 0;
+            position: absolute;
+            z-index: -999;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center font-sans selection:bg-purple-500 selection:text-white p-4">
+
+    <div class="w-full max-w-3xl">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-end mb-8">
+            <div>
+                <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-purple-400">Lovely Type</h1>
+                <p class="text-slate-400 text-sm mt-1">Focus. Breathe. Type.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="setDuration(15)" class="time-opt px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 hover:text-white transition active-time" data-time="15">15s</button>
+                <button onclick="setDuration(30)" class="time-opt px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 hover:text-white transition" data-time="30">30s</button>
+                <button onclick="setDuration(60)" class="time-opt px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 hover:text-white transition" data-time="60">60s</button>
+            </div>
+        </header>
+
+        <!-- Main Card -->
+        <div class="glass-panel rounded-2xl p-8 relative overflow-hidden group" id="game-container">
+            
+            <!-- Click Overlay (to focus) -->
+            <div id="focus-overlay" class="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] cursor-pointer transition-opacity duration-300">
+                <div class="text-center animate-pulse-slow">
+                    <i class="ph ph-cursor-click text-4xl text-teal-400 mb-2"></i>
+                    <p class="text-lg font-medium text-white">Click here or press any key to focus</p>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex justify-between items-center mb-6 text-slate-400 text-sm font-mono border-b border-slate-700/50 pb-4">
+                <div class="flex gap-6">
+                    <div class="flex flex-col">
+                        <span class="text-xs uppercase tracking-wider text-slate-500">Time Left</span>
+                        <span class="text-xl font-bold text-white"><b id="time">60</b>s</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs uppercase tracking-wider text-slate-500">Mistakes</span>
+                        <span class="text-xl font-bold text-white" id="mistake">0</span>
+                    </div>
+                </div>
+                <div class="flex gap-6">
+                    <div class="flex flex-col items-end">
+                        <span class="text-xs uppercase tracking-wider text-slate-500">WPM</span>
+                        <span class="text-xl font-bold text-teal-400" id="wpm">0</span>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span class="text-xs uppercase tracking-wider text-slate-500">Accuracy</span>
+                        <span class="text-xl font-bold text-purple-400" id="accuracy">100%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Area -->
+            <div class="relative min-h-[150px]" onclick="focusInput()">
+                <input type="text" class="hidden-input" id="input-field">
+                <div class="typing-text font-mono text-xl md:text-2xl leading-relaxed text-slate-500 break-words select-none">
+                    <!-- Text injected by JS -->
+                </div>
+            </div>
+
+            <!-- Footer Controls -->
+            <div class="flex justify-center mt-8 pt-4">
+                <button onclick="resetGame()" class="flex items-center gap-2 px-6 py-2 rounded-full bg-slate-700/50 hover:bg-slate-700 text-white transition hover:scale-105 active:scale-95 group-hover:bg-slate-700/80">
+                    <i class="ph ph-arrows-clockwise text-xl group-hover:rotate-180 transition-transform duration-500"></i>
+                    <span>Restart Test</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Modal (Hidden by default) -->
+        <div id="result-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="glass-panel p-8 rounded-2xl max-w-sm w-full text-center transform scale-95 transition-transform duration-300" id="result-card">
+                <div class="w-16 h-16 bg-gradient-to-tr from-teal-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/30">
+                    <i class="ph ph-trophy text-3xl text-white"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-1">Great Job!</h2>
+                <p class="text-slate-400 text-sm mb-6">Here is how you performed</p>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-slate-800/50 p-3 rounded-xl">
+                        <div class="text-2xl font-bold text-teal-400" id="final-wpm">0</div>
+                        <div class="text-xs text-slate-500 uppercase">WPM</div>
+                    </div>
+                    <div class="bg-slate-800/50 p-3 rounded-xl">
+                        <div class="text-2xl font-bold text-purple-400" id="final-acc">0%</div>
+                        <div class="text-xs text-slate-500 uppercase">Accuracy</div>
+                    </div>
+                </div>
+
+                <button onclick="closeResult()" class="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition">
+                    Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const paragraphs = [
+            "The quick brown fox jumps over the lazy dog. It is a classic sentence used to test typewriters and computer keyboards because it uses every letter in the English alphabet.",
+            "Technology is best when it brings people together. We are changing the world with technology. The advance of technology is based on making it fit in so that you don't really even notice it, so it's part of everyday life.",
+            "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment. Do not go where the path may lead, go instead where there is no path and leave a trail.",
+            "Success is not final, failure is not fatal: it is the courage to continue that counts. Believe you can and you're halfway there. I can't change the direction of the wind, but I can adjust my sails to always reach my destination.",
+            "In the middle of difficulty lies opportunity. Life is what happens when you're busy making other plans. The only way to do great work is to love what you do. If you haven't found it yet, keep looking. Don't settle.",
+            "Code is like humor. When you have to explain it, it’s bad. Fix the cause, not the symptom. Simplicity is the soul of efficiency. Before software can be reusable it first has to be usable.",
+            "The stars illuminate the night sky, guiding travelers across the vast oceans. Nature has a way of balancing itself, creating harmony in the chaos of existence.",
+            "Creativity is intelligence having fun. It is the ability to see things differently and create something new from the ordinary. Imagination is more important than knowledge."
+        ];
+
+        const typingText = document.querySelector(".typing-text");
+        const inpField = document.querySelector(".hidden-input");
+        const mistakeTag = document.querySelector("#mistake");
+        const timeTag = document.querySelector("#time");
+        const wpmTag = document.querySelector("#wpm");
+        const accTag = document.querySelector("#accuracy");
+        const focusOverlay = document.getElementById("focus-overlay");
+        const timeButtons = document.querySelectorAll(".time-opt");
+        
+        // Modal elements
+        const resultModal = document.getElementById("result-modal");
+        const resultCard = document.getElementById("result-card");
+        const finalWpm = document.getElementById("final-wpm");
+        const finalAcc = document.getElementById("final-acc");
+
+        let timer;
+        let maxTime = 60;
+        let timeLeft = maxTime;
+        let charIndex = 0; // Current character index
+        let mistakes = 0;
+        let isTyping = false;
+
+        function setDuration(seconds) {
+            maxTime = seconds;
+            timeLeft = seconds;
+            timeTag.innerText = timeLeft;
+            
+            // UI Update
+            timeButtons.forEach(btn => {
+                if(parseInt(btn.dataset.time) === seconds) {
+                    btn.classList.add("text-white", "bg-slate-700");
+                    btn.classList.remove("text-slate-400", "bg-slate-800");
+                } else {
+                    btn.classList.remove("text-white", "bg-slate-700");
+                    btn.classList.add("text-slate-400", "bg-slate-800");
+                }
+            });
+            resetGame();
+        }
+
+        // Initialize defaults
+        setDuration(60);
+
+        function loadParagraph() {
+            const randIndex = Math.floor(Math.random() * paragraphs.length);
+            typingText.innerHTML = "";
+            paragraphs[randIndex].split("").forEach(char => {
+                let span = `<span>${char}</span>`;
+                typingText.innerHTML += span;
+            });
+            typingText.querySelectorAll("span")[0].classList.add("active");
+            
+            // Focus input on load (desktop)
+            document.addEventListener("keydown", () => inpField.focus());
+            typingText.addEventListener("click", () => inpField.focus());
+        }
+
+        function initTyping() {
+            let characters = typingText.querySelectorAll("span");
+            let typedChar = inpField.value.split("")[charIndex];
+
+            // Start timer on first keypress
+            if(!isTyping) {
+                timer = setInterval(initTimer, 1000);
+                isTyping = true;
+                focusOverlay.style.opacity = "0";
+                setTimeout(() => focusOverlay.style.display = "none", 300);
+            }
+
+            // Handle Backspace logic
+            if(typedChar == null) {
+                if(charIndex > 0) {
+                    charIndex--;
+                    if(characters[charIndex].classList.contains("incorrect")) {
+                        mistakes--;
+                    }
+                    characters[charIndex].classList.remove("correct", "incorrect");
+                }
+            } else {
+                if(characters[charIndex].innerText === typedChar) {
+                    characters[charIndex].classList.add("correct");
+                } else {
+                    mistakes++;
+                    characters[charIndex].classList.add("incorrect");
+                }
+                charIndex++;
+            }
+
+            // Move cursor (active class)
+            characters.forEach(span => span.classList.remove("active"));
+            if(charIndex < characters.length) {
+                characters[charIndex].classList.add("active");
+            } else {
+                // Completed the paragraph
+                clearInterval(timer);
+                showResult();
+            }
+
+            // Stats Logic
+            let wpm = Math.round(((charIndex - mistakes)  / 5) / (maxTime - timeLeft) * 60);
+            wpm = wpm < 0 || !wpm || wpm === Infinity ? 0 : wpm;
+            
+            wpmTag.innerText = wpm;
+            mistakeTag.innerText = mistakes;
+            
+            // Accuracy
+            let accuracy = Math.round(((charIndex - mistakes) / charIndex) * 100);
+            accuracy = accuracy < 0 || !accuracy || accuracy === Infinity ? 100 : accuracy;
+            accTag.innerText = accuracy + "%";
+        }
+
+        function initTimer() {
+            if(timeLeft > 0) {
+                timeLeft--;
+                timeTag.innerText = timeLeft;
+                let wpm = Math.round(((charIndex - mistakes)  / 5) / (maxTime - timeLeft) * 60);
+                wpmTag.innerText = wpm;
+            } else {
+                clearInterval(timer);
+                showResult();
+            }
+        }
+
+        function resetGame() {
+            loadParagraph();
+            clearInterval(timer);
+            timeLeft = maxTime;
+            charIndex = mistakes = 0;
+            isTyping = false;
+            inpField.value = "";
+            timeTag.innerText = timeLeft;
+            wpmTag.innerText = 0;
+            mistakeTag.innerText = 0;
+            accTag.innerText = "100%";
+            
+            // Reset Overlay
+            focusOverlay.style.display = "flex";
+            setTimeout(() => focusOverlay.style.opacity = "1", 10);
+            
+            // Hide Modal
+            resultModal.classList.add("opacity-0", "pointer-events-none");
+            resultCard.classList.remove("scale-100");
+            resultCard.classList.add("scale-95");
+        }
+        
+        function focusInput() {
+            inpField.focus();
+            focusOverlay.style.opacity = "0";
+            setTimeout(() => focusOverlay.style.display = "none", 300);
+        }
+
+        function showResult() {
+            inpField.blur();
+            finalWpm.innerText = wpmTag.innerText;
+            finalAcc.innerText = accTag.innerText;
+            
+            resultModal.classList.remove("opacity-0", "pointer-events-none");
+            resultCard.classList.remove("scale-95");
+            resultCard.classList.add("scale-100");
+        }
+
+        function closeResult() {
+            resetGame();
+        }
+
+        loadParagraph();
+        inpField.addEventListener("input", initTyping);
+        
+        // Auto focus listener for the whole document
+        document.addEventListener('keydown', (e) => {
+            // Ignore if modal is open
+            if (!resultModal.classList.contains("opacity-0")) return;
+            inpField.focus();
+        });
+
+    </script>
+</body>
+</html>
